@@ -34,8 +34,11 @@ gejala = [
 input_data = [umur]
 
 for g in gejala:
-    val = st.selectbox(g, [0, 1])
-    input_data.append(val)
+    pilihan = st.selectbox(g, ["Tidak", "Ya"])
+    if pilihan == "Ya":
+        input_data.append(1)
+    else:
+        input_data.append(0)
 
 if st.button("Prediksi"):
     data_np = np.array(input_data).reshape(1, -1)
@@ -43,3 +46,4 @@ if st.button("Prediksi"):
     hasil = model.predict(data_scaled)
 
     st.success(f"Hasil Prediksi: {hasil[0]}")
+
