@@ -1,93 +1,59 @@
 import streamlit as st
 import joblib
 import numpy as np
+import pandas as pd
 
-# =============================
-# Page Config
-# =============================
+# =========================
+# Konfigurasi Halaman
+# =========================
 st.set_page_config(
-    page_title="Sistem Prediksi ISPA",
+    page_title="Prediksi ISPA",
     page_icon="🩺",
     layout="centered"
 )
 
-# =============================
-# Load Model
-# =============================
+# =========================
+# Load Model & Scaler
+# =========================
 model = joblib.load("model_ispa.pkl")
 scaler = joblib.load("scaler.pkl")
 
-# =============================
-# Custom CSS
-# =============================
+# =========================
+# Session State (Riwayat)
+# =========================
+if "riwayat" not in st.session_state:
+    st.session_state.riwayat = []
+
+# =========================
+# Styling
+# =========================
 st.markdown("""
-    <style>
-        body {
-            background-color: #f4f6f9;
-        }
-        .main-title {
-            text-align: center;
-            font-size: 40px;
-            font-weight: bold;
-            color: #2c3e50;
-        }
-        .sub-title {
-            text-align: center;
-            color: #7f8c8d;
-            margin-bottom: 25px;
-        }
-        .card {
-            background-color: white;
-            padding: 20px;
-            border-radius: 16px;
-            box-shadow: 0px 4px 12px rgba(0,0,0,0.08);
-            margin-bottom: 20px;
-        }
-        .stButton>button {
-            background-color: #1abc9c;
-            color: white;
-            font-size: 18px;
-            height: 3em;
-            width: 100%;
-            border-radius: 12px;
-        }
-        .result-success {
-            background-color: #e8f8f5;
-            padding: 20px;
-            border-radius: 12px;
-            font-size: 20px;
-            color: #117864;
-            font-weight: bold;
-            text-align: center;
-        }
-        .result-warning {
-            background-color: #fdecea;
-            padding: 20px;
-            border-radius: 12px;
-            font-size: 20px;
-            color: #922b21;
-            font-weight: bold;
-            text-align: center;
-        }
-    </style>
+<style>
+.stButton>button {
+    background-color: #2e86de;
+    color: white;
+    font-size: 18px;
+    height: 3em;
+    width: 100%;
+    border-radius: 12px;
+}
+</style>
 """, unsafe_allow_html=True)
 
-# =============================
+# =========================
 # Header
-# =============================
-st.markdown("<div class='main-title'>🩺 Sistem Prediksi Penyakit ISPA</div>", unsafe_allow_html=True)
-st.markdown("<div class='sub-title'>Tampilan profesional untuk analisis gejala pasien</div>", unsafe_allow_html=True)
+# =========================
+st.markdown("<h1 style='text-align:center;'>🩺 Aplikasi Prediksi Penyakit ISPA</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center;'>Masukkan data pasien untuk mendapatkan hasil prediksi</p>", unsafe_allow_html=True)
+st.divider()
 
-# =============================
-# Form Input
-# =============================
-st.markdown("<div class='card'>", unsafe_allow_html=True)
+# =========================
+# Input Data
+# =========================
 st.subheader("🧑‍⚕️ Data Pasien")
-
-umur = st.number_input("Umur Pasien", min_value=0, max_value=100)
+umur = st.number_input("Umur", min_value=1, max_value=100)
 
 st.subheader("🤒 Gejala Pasien")
-
 gejala = [
     "Batuk Kering", "Batuk Berdahak", "Demam", "Pilek",
     "Hidung Tersumbat", "Sesak Napas", "Nyeri Tenggorokan", "Sakit Kepala",
@@ -97,29 +63,73 @@ gejala = [
 
 col1, col2 = st.columns(2)
 input_data = [umur]
+input_display = {}
 
 for i, g in enumerate(gejala):
     with col1 if i % 2 == 0 else col2:
         pilihan = st.selectbox(g, ["Tidak", "Ya"])
-        input_data.append(1 if pilihan == "Ya" else 0)
+        nilai = 1 if pilihan == "Ya" else 0
+        input_data.append(nilai)
+        input_display[g] = pilihan
 
-st.markdown("</div>", unsafe_allow_html=True)
+# =========================
+# Ringkasan Input
+# =========================
+st.divider()
+st.subheader("📋 Ringkasan Data Pasien")
+st.write(f"**Umur:** {umur} tahun")
+st.write(", ".join([f"{k}: {v}" for k, v in input_display.items()]))
 
-# =============================
+# =========================
 # Prediksi
-# =============================
-if st.button("🔍 ANALISIS PREDIKSI"):
+# =========================
+if st.button("🔍 Prediksi Penyakit"):
     data_np = np.array(input_data).reshape(1, -1)
     data_scaled = scaler.transform(data_np)
-    hasil = model.predict(data_scaled)[0]
 
+    prediksi = model.predict(data_scaled)[0]
+
+    # Confidence / Probability
+    proba = model.predict_proba(data_scaled)[0]
+    kelas = model.classes_
+    confidence = np.max(proba) * 100
+
+    # Simpan riwayat
+    st.session_state.riwayat.append({
+        "Umur": umur,
+        "Diagnosis": prediksi,
+        "Confidence (%)": round(confidence, 2)
+    })
+
+    # =========================
+    # Tampilan Hasil
+    # =========================
+    st.success(f"✅ **Hasil Prediksi: {prediksi}**")
+    st.info(f"🔎 Tingkat Kepercayaan Model: **{confidence:.2f}%**")
+
+    st.markdown(
+        f"""
+        **Penjelasan:**  
+        Berdasarkan gejala klinis yang dimasukkan, model machine learning
+        memprediksi bahwa pasien memiliki kemungkinan **{prediksi}**.
+        """
+    )
+
+    # =========================
+    # Visualisasi Probabilitas
+    # =========================
+    df_proba = pd.DataFrame({
+        "Diagnosis": kelas,
+        "Probabilitas (%)": proba * 100
+    })
+
+    st.subheader("📊 Distribusi Probabilitas Diagnosis")
+    st.bar_chart(df_proba.set_index("Diagnosis"))
+
+# =========================
+# Riwayat Prediksi
+# =========================
+if st.session_state.riwayat:
     st.divider()
-    st.subheader("📊 Hasil Analisis")
-
-    # Mapping hasil ke label lebih manusiawi
-    if hasil == 1:
-        st.markdown("<div class='result-warning'>⚠️ Pasien Terindikasi ISPA</div>", unsafe_allow_html=True)
-        st.info("Disarankan untuk melakukan pemeriksaan lanjutan ke fasilitas kesehatan.")
-    else:
-        st.markdown("<div class='result-success'>✅ Pasien Tidak Terindikasi ISPA</div>", unsafe_allow_html=True)
-        st.success("Kondisi relatif aman berdasarkan gejala yang dimasukkan.")
+    st.subheader("🕒 Riwayat Prediksi")
+    st.dataframe(pd.DataFrame(st.session_state.riwayat))
