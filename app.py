@@ -19,23 +19,39 @@ model = joblib.load("model_ispa.pkl")
 scaler = joblib.load("scaler.pkl")
 
 # =========================
-# Session State (Riwayat)
+# Session State
 # =========================
 if "riwayat" not in st.session_state:
     st.session_state.riwayat = []
 
 # =========================
-# Styling
+# Styling Modern
 # =========================
 st.markdown("""
 <style>
+.card {
+    padding: 20px;
+    border-radius: 16px;
+    background: #f8f9fa;
+    margin-bottom: 20px;
+}
+.result-positive {
+    background-color: #d4edda;
+    padding: 16px;
+    border-radius: 12px;
+}
+.result-negative {
+    background-color: #f8d7da;
+    padding: 16px;
+    border-radius: 12px;
+}
 .stButton>button {
     background-color: #2e86de;
     color: white;
     font-size: 18px;
     height: 3em;
     width: 100%;
-    border-radius: 12px;
+    border-radius: 14px;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -43,15 +59,16 @@ st.markdown("""
 # =========================
 # Header
 # =========================
-st.markdown("<h1 style='text-align:center;'>🩺 Aplikasi Prediksi Penyakit ISPA</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center;'>Masukkan data pasien untuk mendapatkan hasil prediksi</p>", unsafe_allow_html=True)
-st.divider()
+st.markdown("<h1 style='text-align:center;'>🩺 Prediksi Penyakit ISPA</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center;'>Aplikasi klasifikasi ISPA berbasis Machine Learning</p>", unsafe_allow_html=True)
 
 # =========================
-# Input Data
+# Input Section
 # =========================
+st.markdown("<div class='card'>", unsafe_allow_html=True)
 st.subheader("🧑‍⚕️ Data Pasien")
-umur = st.number_input("Umur", min_value=1, max_value=100)
+
+umur = st.number_input("Umur (tahun)", min_value=1, max_value=100)
 
 st.subheader("🤒 Gejala Pasien")
 gejala = [
@@ -63,73 +80,58 @@ gejala = [
 
 col1, col2 = st.columns(2)
 input_data = [umur]
-input_display = {}
+display = {}
 
 for i, g in enumerate(gejala):
     with col1 if i % 2 == 0 else col2:
-        pilihan = st.selectbox(g, ["Tidak", "Ya"])
-        nilai = 1 if pilihan == "Ya" else 0
-        input_data.append(nilai)
-        input_display[g] = pilihan
+        val = st.selectbox(g, ["Tidak", "Ya"])
+        input_data.append(1 if val == "Ya" else 0)
+        display[g] = val
+
+st.markdown("</div>", unsafe_allow_html=True)
 
 # =========================
-# Ringkasan Input
+# Ringkasan
 # =========================
-st.divider()
-st.subheader("📋 Ringkasan Data Pasien")
+st.markdown("<div class='card'>", unsafe_allow_html=True)
+st.subheader("📋 Ringkasan Data")
 st.write(f"**Umur:** {umur} tahun")
-st.write(", ".join([f"{k}: {v}" for k, v in input_display.items()]))
+st.write(", ".join([f"{k}: {v}" for k, v in display.items()]))
+st.markdown("</div>", unsafe_allow_html=True)
 
 # =========================
 # Prediksi
 # =========================
 if st.button("🔍 Prediksi Penyakit"):
-    data_np = np.array(input_data).reshape(1, -1)
-    data_scaled = scaler.transform(data_np)
+    data = np.array(input_data).reshape(1, -1)
+    data_scaled = scaler.transform(data)
+    hasil = model.predict(data_scaled)[0]
 
-    prediksi = model.predict(data_scaled)[0]
-
-    # Confidence / Probability
-    proba = model.predict_proba(data_scaled)[0]
-    kelas = model.classes_
-    confidence = np.max(proba) * 100
-
-    # Simpan riwayat
     st.session_state.riwayat.append({
         "Umur": umur,
-        "Diagnosis": prediksi,
-        "Confidence (%)": round(confidence, 2)
+        "Hasil Prediksi": hasil
     })
 
-    # =========================
-    # Tampilan Hasil
-    # =========================
-    st.success(f"✅ **Hasil Prediksi: {prediksi}**")
-    st.info(f"🔎 Tingkat Kepercayaan Model: **{confidence:.2f}%**")
+    # Tampilan hasil
+    css_class = "result-positive" if "ISPA" in str(hasil) else "result-negative"
 
+    st.markdown(f"<div class='{css_class}'>", unsafe_allow_html=True)
+    st.markdown(f"### ✅ Hasil Prediksi: **{hasil}**")
     st.markdown(
-        f"""
-        **Penjelasan:**  
-        Berdasarkan gejala klinis yang dimasukkan, model machine learning
-        memprediksi bahwa pasien memiliki kemungkinan **{prediksi}**.
-        """
+        "Berdasarkan data gejala yang dimasukkan, "
+        "model machine learning memberikan hasil klasifikasi di atas. "
+        "Hasil ini dapat digunakan sebagai **alat bantu** dan bukan pengganti diagnosis medis."
     )
-
-    # =========================
-    # Visualisasi Probabilitas
-    # =========================
-    df_proba = pd.DataFrame({
-        "Diagnosis": kelas,
-        "Probabilitas (%)": proba * 100
-    })
-
-    st.subheader("📊 Distribusi Probabilitas Diagnosis")
-    st.bar_chart(df_proba.set_index("Diagnosis"))
+    st.markdown("</div>", unsafe_allow_html=True)
 
 # =========================
-# Riwayat Prediksi
+# Riwayat
 # =========================
 if st.session_state.riwayat:
     st.divider()
     st.subheader("🕒 Riwayat Prediksi")
     st.dataframe(pd.DataFrame(st.session_state.riwayat))
+
+    if st.button("🔄 Reset Riwayat"):
+        st.session_state.riwayat = []
+        st.experimental_rerun()
