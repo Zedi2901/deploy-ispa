@@ -24,45 +24,34 @@ if "riwayat" not in st.session_state:
 # =========================
 # Styling Advanced
 # =========================
+
 st.markdown("""
 <style>
-body {
-    background-color: #f4f6f9;
+/* Background utama */
+[data-testid="stAppViewContainer"] {
+    background: linear-gradient(135deg, #eef2f7, #f8fbff);
 }
+
+/* Sidebar (kalau ada) */
+[data-testid="stSidebar"] {
+    background-color: #1f2a44;
+}
+
+/* Container konten */
+[data-testid="stVerticalBlock"] {
+    padding-top: 1.5rem;
+}
+
+/* Card */
 .card {
-    background: linear-gradient(135deg, #ffffff, #f1f3f6);
+    background: linear-gradient(135deg, #ffffff, #f3f6fa);
     padding: 24px;
     border-radius: 18px;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
     margin-bottom: 24px;
 }
-.result-ispa {
-    background: linear-gradient(135deg, #ffe5e5, #fff0f0);
-    border-left: 6px solid #e74c3c;
-    padding: 20px;
-    border-radius: 16px;
-}
-.result-normal {
-    background: linear-gradient(135deg, #e8f9f1, #f2fff9);
-    border-left: 6px solid #2ecc71;
-    padding: 20px;
-    border-radius: 16px;
-}
-.badge {
-    display: inline-block;
-    padding: 6px 14px;
-    border-radius: 20px;
-    font-weight: 600;
-    font-size: 14px;
-}
-.badge-red {
-    background: #e74c3c;
-    color: white;
-}
-.badge-green {
-    background: #2ecc71;
-    color: white;
-}
+
+/* Button */
 .stButton>button {
     background: linear-gradient(90deg, #2e86de, #1b4f72);
     color: white;
@@ -166,3 +155,4 @@ if st.session_state.riwayat:
     st.divider()
     st.subheader("🕒 Riwayat Prediksi")
     st.dataframe(pd.DataFrame(st.session_state.riwayat))
+
